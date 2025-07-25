@@ -1,39 +1,38 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Jogo da Tabuada</title>
-    <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jogo da Tabuada</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
-    <div class="container">
-        <h1>Jogo da Tabuada</h1>
+  <div class="container">
+    <h1>Jogo da Tabuada</h1>
 
-        <div id="start-screen">
-            <label for="tabuada">Escolha a tabuada:</label>
-            <select id="tabuada">
-                <option value="">-- Escolher --</option>
-            </select>
-            <button onclick="iniciarJogo()">Começar</button>
-        </div>
-
-        <div id="quiz-screen" style="display: none;">
-            <div id="pergunta"></div>
-            <div id="temporizador" style="font-weight:bold; margin-bottom: 10px;">Tempo restante: 30s</div>
-            <input type="number" id="resposta" autocomplete="off" />
-            <button onclick="responder()">Responder</button>
-            <button onclick="finalizarJogo()" style="margin-top: 10px; background-color: #dc3545;">Finalizar Jogo</button>
-            <p id="feedback"></p>
-        </div>
-
-        <div id="resultado" style="display: none;"></div>
-        <button id="reiniciar" onclick="reiniciarJogo()" style="display: none;">Jogar Novamente</button>
+    <div id="inicio">
+      <input type="text" id="nome" placeholder="Digite seu nome" />
+      <button onclick="iniciarJogo()">Iniciar</button>
     </div>
 
-    <script src="script.js"></script>
-</body>
+    <div id="jogo" style="display: none;">
+      <p id="questao"></p>
+      <input type="number" id="resposta" placeholder="Resposta" />
+      <button onclick="verificarResposta()">Responder</button>
+      <p id="feedback"></p>
+      <p id="progresso"></p>
+    </div>
 
+    <div id="resultado" style="display: none;">
+      <h2>Resultado</h2>
+      <p id="resumo"></p>
+      <p id="comparativo"></p>
+      <h3>Ranking</h3>
+      <div id="ranking"></div>
+      <button onclick="recomecar()">Jogar novamente</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
 </html>

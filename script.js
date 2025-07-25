@@ -1,202 +1,121 @@
-let tabuada = null;
-let perguntas = [];
-let atual = 0;
+let jogador = '';
 let acertos = 0;
-let respostas = [];  // guarda histórico respostas
-let temporizadorId = null;
-let tempoRestante = 30;
-
-window.onload = () => {
-  const select = document.getElementById('tabuada');
-  for (let i = 0; i <= 10; i++) {
-    const option = document.createElement('option');
-    option.value = i;
-    option.textContent = i;
-    select.appendChild(option);
-  }
-};
+let erros = 0;
+let inicio;
+let questoes = [];
+let questaoAtual = 0;
 
 function iniciarJogo() {
-  const valor = document.getElementById('tabuada').value;
-  if (!valor) return alert('Escolha uma tabuada');
-
-  tabuada = parseInt(valor);
-  perguntas = Array.from({ length: 11 }, (_, i) => ({ fator: i, resultado: i * tabuada }))
-    .sort(() => Math.random() - 0.5);
-
-  atual = 0;
-  acertos = 0;
-  respostas = [];
-
-  document.getElementById('start-screen').style.display = 'none';
-  document.getElementById('resultado').style.display = 'none';
-  document.getElementById('reiniciar').style.display = 'none';
-  document.getElementById('quiz-screen').style.display = 'block';
-
-  mostrarPergunta();
-}
-
-function mostrarPergunta() {
-  const pergunta = perguntas[atual];
-  document.getElementById('pergunta').textContent = `Quanto é ${tabuada} x ${pergunta.fator}?`;
-  const inputResposta = document.getElementById('resposta');
-  inputResposta.value = '';
-  inputResposta.focus();
-  document.getElementById('feedback').textContent = '';
-
-  // reset e iniciar temporizador
-  tempoRestante = 30;
-  atualizarTemporizador();
-  if (temporizadorId) clearInterval(temporizadorId);
-  temporizadorId = setInterval(() => {
-    tempoRestante--;
-    atualizarTemporizador();
-
-    if (tempoRestante <= 0) {
-      clearInterval(temporizadorId);
-      registrarResposta(null, true); // resposta = null e timeout = true
-    }
-  }, 1000);
-}
-
-function atualizarTemporizador() {
-  document.getElementById('temporizador').textContent = `Tempo restante: ${tempoRestante}s`;
-}
-
-function responder() {
-  if (temporizadorId) {
-    clearInterval(temporizadorId);
-    temporizadorId = null;
-  }
-  const inputResposta = document.getElementById('resposta');
-  const valor = parseInt(inputResposta.value);
-  registrarResposta(valor, false);
-}
-
-function registrarResposta(valor, timeout) {
-  const pergunta = perguntas[atual];
-  const correta = pergunta.resultado;
-  let acertou = false;
-  let feedbackMsg = '';
-
-  if (timeout) {
-    feedbackMsg = `⏰ Tempo esgotado! Resposta correta: ${correta}`;
-  } else if (isNaN(valor)) {
-    alert('Digite um número válido!');
-    // reinicia temporizador para continuar respondendo
-    mostrarPergunta();
+  const nomeInput = document.getElementById("nome");
+  jogador = nomeInput.value.trim();
+  if (!jogador) {
+    alert("Digite seu nome para começar.");
     return;
-  } else if (valor === correta) {
-    acertou = true;
-    acertos++;
-    feedbackMsg = '✅ Correto!';
-  } else {
-    feedbackMsg = `❌ Errado! Resposta correta: ${correta}`;
   }
 
-  document.getElementById('feedback').textContent = feedbackMsg;
+  // Reset
+  acertos = 0;
+  erros = 0;
+  questaoAtual = 0;
+  questoes = [];
 
-  respostas.push({
-    fator: pergunta.fator,
-    respostaUsuario: valor,
-    respostaCorreta: correta,
-    acertou,
-    tempoEsgotado: timeout
-  });
+  for (let i = 0; i < 10; i++) {
+    const a = Math.floor(Math.random() * 10) + 1;
+    const b = Math.floor(Math.random() * 10) + 1;
+    questoes.push({ a, b });
+  }
 
-  atual++;
+  document.getElementById("inicio").style.display = "none";
+  document.getElementById("jogo").style.display = "block";
+  document.getElementById("resultado").style.display = "none";
 
-  if (atual < perguntas.length) {
-    setTimeout(mostrarPergunta, 1500);
+  inicio = new Date();
+  mostrarQuestao();
+}
+
+function mostrarQuestao() {
+  const { a, b } = questoes[questaoAtual];
+  document.getElementById("questao").textContent = `Quanto é ${a} x ${b}?`;
+  document.getElementById("resposta").value = '';
+  document.getElementById("feedback").textContent = '';
+  document.getElementById("progresso").textContent = `Pergunta ${questaoAtual + 1} de ${questoes.length}`;
+  document.getElementById("resposta").focus();
+}
+
+function verificarResposta() {
+  const respostaInput = document.getElementById("resposta");
+  const resposta = parseInt(respostaInput.value);
+  const { a, b } = questoes[questaoAtual];
+
+  if (resposta === a * b) {
+    acertos++;
+    document.getElementById("feedback").textContent = "✔️ Correto!";
   } else {
-    setTimeout(mostrarResultado, 1500);
+    erros++;
+    document.getElementById("feedback").textContent = `❌ Errado! Resposta correta: ${a * b}`;
+  }
+
+  questaoAtual++;
+  if (questaoAtual < questoes.length) {
+    setTimeout(mostrarQuestao, 1000);
+  } else {
+    finalizarJogo();
   }
 }
 
 function finalizarJogo() {
-  // Para o temporizador se estiver rodando
-  if (temporizadorId) {
-    clearInterval(temporizadorId);
-    temporizadorId = null;
+  const tempo = Math.floor((new Date() - inicio) / 1000);
+  const pontuacao = acertos * 100 - erros * 50 - tempo * 10;
+
+  const resultadoAtual = {
+    nome: jogador,
+    acertos,
+    erros,
+    tempo,
+    pontuacao,
+    data: new Date().toLocaleString()
+  };
+
+  const ranking = JSON.parse(localStorage.getItem("rankingTabuada") || "[]");
+  const ultimaTentativa = ranking.find(j => j.nome === jogador);
+  
+  const comparativoEl = document.getElementById("comparativo");
+  if (ultimaTentativa) {
+    if (pontuacao > ultimaTentativa.pontuacao) {
+      comparativoEl.textContent = "🎉 Você foi melhor que a última vez!";
+    } else if (pontuacao < ultimaTentativa.pontuacao) {
+      comparativoEl.textContent = "😓 Você foi pior que a última vez.";
+    } else {
+      comparativoEl.textContent = "😐 Mesmo desempenho da última tentativa.";
+    }
+  } else {
+    comparativoEl.textContent = "📌 Primeira tentativa registrada!";
   }
 
-  // Se a pergunta atual não foi respondida, registra como não respondida (tempo esgotado)
-  if (atual < perguntas.length) {
-    const perguntaAtual = perguntas[atual];
-    respostas.push({
-      fator: perguntaAtual.fator,
-      respostaUsuario: null,
-      respostaCorreta: perguntaAtual.resultado,
-      acertou: false,
-      tempoEsgotado: true,
-    });
-  }
+  // Atualiza ranking (substitui se já existir)
+  const atualizado = ranking.filter(j => j.nome !== jogador);
+  atualizado.push(resultadoAtual);
 
-  atual = perguntas.length; // marca fim do jogo
-  mostrarResultado();
+  // Ordena por pontuação
+  atualizado.sort((a, b) => b.pontuacao - a.pontuacao);
+  localStorage.setItem("rankingTabuada", JSON.stringify(atualizado));
+
+  // Atualiza resultado
+  document.getElementById("resumo").textContent = `Você acertou ${acertos}, errou ${erros}, e levou ${tempo}s.`;
+  const rankingDiv = document.getElementById("ranking");
+
+  rankingDiv.innerHTML = atualizado.map((j, i) => {
+    const destaque = j.nome === jogador ? 'style="font-weight:bold; color:green;"' : '';
+    return `<p ${destaque}>${i + 1}. ${j.nome} - ${j.acertos} acertos - ${j.erros} erros - ${j.tempo}s - ${j.data}</p>`;
+  }).join('');
+
+  document.getElementById("jogo").style.display = "none";
+  document.getElementById("resultado").style.display = "block";
 }
 
-function mostrarResultado() {
-  document.getElementById('quiz-screen').style.display = 'none';
-  document.getElementById('resultado').style.display = 'block';
-  document.getElementById('reiniciar').style.display = 'inline-block';
-
-  const totalPerguntas = perguntas.length;
-  const erros = respostas.filter(r => !r.acertou).length;
-
-  let relatorioHTML = `
-    <h2>Você acertou ${acertos} de ${totalPerguntas} perguntas!</h2>
-    <h3>Erros: ${erros}</h3>
-    <table border="1" cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse;">
-      <thead>
-        <tr>
-          <th>Fórmula</th>
-          <th>Sua resposta</th>
-          <th>Correta</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
-
-  respostas.forEach(r => {
-    let status = r.acertou ? '✅ Acertou' : r.tempoEsgotado ? '⏰ Tempo esgotado' : '❌ Errou';
-    let respostaUsuario = (r.respostaUsuario === null || r.respostaUsuario === undefined) ? '-' : r.respostaUsuario;
-    relatorioHTML += `
-      <tr>
-        <td>${tabuada} x ${r.fator}</td>
-        <td style="text-align: center;">${respostaUsuario}</td>
-        <td style="text-align: center;">${r.respostaCorreta}</td>
-        <td style="text-align: center;">${status}</td>
-      </tr>
-    `;
-  });
-
-  relatorioHTML += `
-      </tbody>
-    </table>
-  `;
-
-  document.getElementById('resultado').innerHTML = relatorioHTML;
-}
-
-function reiniciarJogo() {
-  if (temporizadorId) clearInterval(temporizadorId);
-  document.getElementById('resultado').style.display = 'none';
-  document.getElementById('reiniciar').style.display = 'none';
-  document.getElementById('quiz-screen').style.display = 'none';
-  document.getElementById('start-screen').style.display = 'block';
-
-  // reset variables
-  tabuada = null;
-  perguntas = [];
-  atual = 0;
-  acertos = 0;
-  respostas = [];
-
-  // clear input and feedback
-  document.getElementById('tabuada').value = '';
-  document.getElementById('feedback').textContent = '';
-  document.getElementById('resposta').value = '';
-  document.getElementById('temporizador').textContent = 'Tempo restante: 30s';
+function recomecar() {
+  document.getElementById("inicio").style.display = "block";
+  document.getElementById("jogo").style.display = "none";
+  document.getElementById("resultado").style.display = "none";
+  document.getElementById("nome").value = '';
 }
