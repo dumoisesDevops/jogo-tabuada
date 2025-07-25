@@ -2,37 +2,191 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Jogo da Tabuada</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jogo da Tabuada com Ranking</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
+  <div class="container" id="container">
     <h1>Jogo da Tabuada</h1>
 
     <div id="inicio">
+      <label for="nome">Seu nome:</label>
       <input type="text" id="nome" placeholder="Digite seu nome" />
-      <button onclick="iniciarJogo()">Iniciar</button>
+
+      <label for="tabuada">Escolha a tabuada:</label>
+      <select id="tabuada">
+        <option value="">-- Selecione --</option>
+        <option value="0">0</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+        <option value="9">9</option>
+        <option value="10">10</option>
+      </select>
+
+      <button id="btn-iniciar">Iniciar Jogo</button>
     </div>
 
-    <div id="jogo" style="display: none;">
-      <p id="questao"></p>
-      <input type="number" id="resposta" placeholder="Resposta" />
-      <button onclick="verificarResposta()">Responder</button>
-      <p id="feedback"></p>
-      <p id="progresso"></p>
+    <div id="jogo" class="hidden">
+      <h2 id="pergunta"></h2>
+      <input type="number" id="resposta" placeholder="Digite sua resposta" />
+      <button id="btn-responder">Responder</button>
     </div>
 
-    <div id="resultado" style="display: none;">
-      <h2>Resultado</h2>
-      <p id="resumo"></p>
-      <p id="comparativo"></p>
-      <h3>Ranking</h3>
-      <div id="ranking"></div>
-      <button onclick="recomecar()">Jogar novamente</button>
-    </div>
+    <div id="resultado" class="hidden"></div>
+    <div id="ranking" class="hidden"></div>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    const API_BASE = 'http://localhost:3000';
+
+    let perguntas = [];
+    let respostasCorretas = [];
+    let indice = 0;
+    let acertos = 0;
+    let erros = 0;
+    let inicioTempo;
+    let nome = '';
+    let tabuada = 0;
+
+    const btnIniciar = document.getElementById('btn-iniciar');
+    const btnResponder = document.getElementById('btn-responder');
+    const inputNome = document.getElementById('nome');
+    const selectTabuada = document.getElementById('tabuada');
+    const divInicio = document.getElementById('inicio');
+    const divJogo = document.getElementById('jogo');
+    const divResultado = document.getElementById('resultado');
+    const divRanking = document.getElementById('ranking');
+    const perguntaEl = document.getElementById('pergunta');
+    const inputResposta = document.getElementById('resposta');
+
+    btnIniciar.addEventListener('click', iniciarJogo);
+    btnResponder.addEventListener('click', verificarResposta);
+
+    function iniciarJogo() {
+      nome = inputNome.value.trim();
+      tabuada = selectTabuada.value;
+
+      if (!nome) return alert('Digite seu nome!');
+      if (tabuada === '') return alert('Escolha uma tabuada!');
+
+      tabuada = parseInt(tabuada);
+
+      perguntas = [];
+      respostasCorretas = [];
+      for (let i = 0; i <= 10; i++) {
+        perguntas.push(i);
+        respostasCorretas.push(i * tabuada);
+      }
+
+      indice = 0;
+      acertos = 0;
+      erros = 0;
+      inicioTempo = Date.now();
+
+      divInicio.classList.add('hidden');
+      divResultado.classList.add('hidden');
+      divRanking.classList.add('hidden');
+      divJogo.classList.remove('hidden');
+
+      mostrarPergunta();
+    }
+
+    function mostrarPergunta() {
+      perguntaEl.textContent = `Quanto é ${tabuada} x ${perguntas[indice]}?`;
+      inputResposta.value = '';
+      inputResposta.focus();
+    }
+
+    function verificarResposta() {
+      const resposta = parseInt(inputResposta.value);
+      if (isNaN(resposta)) {
+        alert('Digite um número válido!');
+        return;
+      }
+
+      if (resposta === respostasCorretas[indice]) {
+        acertos++;
+      } else {
+        erros++;
+      }
+
+      indice++;
+      if (indice > 10) {
+        finalizarJogo();
+      } else {
+        mostrarPergunta();
+      }
+    }
+
+    async function finalizarJogo() {
+      const tempoSegundos = Math.round((Date.now() - inicioTempo) / 1000);
+      const pontuacao = acertos * 100 - erros * 50 - tempoSegundos * 10;
+
+      const resultadoAtual = {
+        nome,
+        tabuada,
+        acertos,
+        erros,
+        tempo: tempoSegundos,
+        pontuacao,
+        data: new Date().toLocaleString()
+      };
+
+      try {
+        await fetch(`${API_BASE}/resultado`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(resultadoAtual),
+        });
+
+        const res = await fetch(`${API_BASE}/ranking/${tabuada}`);
+        const ranking = await res.json();
+
+        // Busca registro anterior do jogador na mesma tabuada
+        const historicoJogador = ranking.find(r => r.nome === nome && !(r.data === resultadoAtual.data));
+
+        let comparativo = '';
+        if (historicoJogador) {
+          if (pontuacao > historicoJogador.pontuacao) comparativo = '🚀 Você foi melhor que da última vez!';
+          else if (pontuacao < historicoJogador.pontuacao) comparativo = '😕 Você foi pior que da última vez.';
+          else comparativo = '😐 Mesmo desempenho da última vez.';
+        }
+
+        mostrarResultado(resultadoAtual, ranking, comparativo);
+      } catch (error) {
+        alert('Erro ao comunicar com o servidor: ' + error.message);
+      }
+    }
+
+    function mostrarResultado(resultado, ranking, comparativo) {
+      divJogo.classList.add('hidden');
+      divResultado.classList.remove('hidden');
+      divRanking.classList.remove('hidden');
+
+      divResultado.innerHTML = `
+        <h2>Resultado para ${resultado.nome}</h2>
+        <p>Tabuada: ${resultado.tabuada}</p>
+        <p>Acertos: ${resultado.acertos}</p>
+        <p>Erros: ${resultado.erros}</p>
+        <p>Tempo: ${resultado.tempo} segundos</p>
+        <p>Pontuação: ${resultado.pontuacao}</p>
+        <p><strong>${comparativo}</strong></p>
+        <button onclick="window.location.reload()">Jogar Novamente</button>
+      `;
+
+      divRanking.innerHTML = `<h3>🏆 Ranking Tabuada do ${resultado.tabuada}</h3>` +
+        ranking.map((r, i) => {
+          const destaque = r.nome === resultado.nome ? 'style="font-weight:bold;color:green"' : '';
+          return `<p ${destaque}>${i + 1}. ${r.nome} - Acertos: ${r.acertos} - Tempo: ${r.tempo}s - Pontos: ${r.pontuacao}</p>`;
+        }).join('');
+    }
+  </script>
 </body>
 </html>

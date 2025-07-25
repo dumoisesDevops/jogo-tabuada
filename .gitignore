@@ -1,0 +1,32 @@
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Diretório de build (se criar algum)
+dist/
+build/
+
+# Arquivo de ranking gerado
+ranking.json
+
+# Arquivos temporários do sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos do editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Arquivos temporários do sistema operacional
+*.tmp
+*.temp
